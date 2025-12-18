@@ -17,8 +17,30 @@
 
       <main class="app-main">
         <section class="controls">
+          <!-- Légende visuelle -->
+          <div class="legend">
+            <h4>Légende</h4>
+            <div class="legend-items">
+              <div class="legend-item">
+                <div class="legend-color" style="background: #111827;"></div>
+                <span>Fermé</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background: #06b6d4;"></div>
+                <span>Ouvert</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background: #22c55e;"></div>
+                <span>Percolant</span>
+              </div>
+            </div>
+          </div>
+
           <div class="control-group">
-            <label for="grid-type">Type de grille</label>
+            <label for="grid-type">
+              Type de grille
+              <span class="tooltip-trigger" data-tooltip="Choisissez la forme de la grille : carrée, triangulaire ou hexagonale. Chaque type a un seuil de percolation différent.">ℹ️</span>
+            </label>
             <select id="grid-type">
               <option value="square" selected>Carrée</option>
               <option value="triangular">Triangulaire</option>
@@ -30,6 +52,7 @@
             <label for="grid-size">
               Taille de la grille
               <span id="grid-size-label"></span>
+              <span class="tooltip-trigger" data-tooltip="Plus la grille est grande, plus le seuil de percolation est précis. Les grandes grilles prennent plus de temps à calculer.">ℹ️</span>
             </label>
             <input
               type="range"
@@ -43,8 +66,9 @@
 
           <div class="control-group">
             <label for="occupation-prob">
-              Probabilité d’occupation \(p\)
+              Probabilité d'occupation \(p\)
               <span id="occupation-prob-label"></span>
+              <span class="tooltip-trigger" data-tooltip="La probabilité qu'un site soit ouvert. Si p est trop faible, pas de percolation. Si p est trop élevé, percolation garantie. Le seuil théorique est autour de 0.593 pour une grille carrée.">ℹ️</span>
             </label>
             <input
               type="range"
@@ -57,9 +81,10 @@
           </div>
 
           <div class="buttons">
-            <button id="btn-randomize">Aléatoire</button>
-            <button id="btn-step">Ouvrir un site</button>
-            <button id="btn-reset" class="secondary">Réinitialiser</button>
+            <button id="btn-randomize" data-tooltip="Génère une nouvelle configuration aléatoire avec la probabilité p choisie">Aléatoire</button>
+            <button id="btn-step" data-tooltip="Ouvre un seul site fermé choisi au hasard. Utile pour voir la percolation apparaître progressivement.">Ouvrir un site</button>
+            <button id="btn-simulate" data-tooltip="Lance une animation automatique qui augmente progressivement p de 0 à 1, montrant l'évolution de la percolation.">Simulation</button>
+            <button id="btn-reset" class="secondary" data-tooltip="Réinitialise la grille en fermant tous les sites">Réinitialiser</button>
           </div>
 
           <div class="status">
@@ -74,6 +99,13 @@
 
         <section class="canvas-wrapper">
           <canvas id="percolation-canvas"></canvas>
+          <!-- Effet de célébration -->
+          <div id="celebration" class="celebration hidden">
+            <div class="celebration-content">
+              <div class="celebration-icon">🎉</div>
+              <div class="celebration-text">Percolation détectée !</div>
+            </div>
+          </div>
         </section>
       </main>
     </div>
