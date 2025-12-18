@@ -15,9 +15,9 @@ export class PercolationModel {
     }
     
     this.virtualTop = this.nSites;
-    this.virtualBottom = this.nSites;
-    this.ufTop = new UnionFind(this.nSites + 1);
-    this.ufBottom = new UnionFind(this.nSites + 1);
+    this.virtualBottom = this.nSites + 1;
+    this.ufTop = new UnionFind(this.nSites + 2);
+    this.ufBottom = new UnionFind(this.nSites + 2);
     this.open = new Array(this.nSites).fill(false);
     this.openCount = 0;
     
@@ -74,9 +74,9 @@ export class PercolationModel {
     }
     
     this.virtualTop = this.nSites;
-    this.virtualBottom = this.nSites;
-    this.ufTop = new UnionFind(this.nSites + 1);
-    this.ufBottom = new UnionFind(this.nSites + 1);
+    this.virtualBottom = this.nSites + 1;
+    this.ufTop = new UnionFind(this.nSites + 2);
+    this.ufBottom = new UnionFind(this.nSites + 2);
     this.open = new Array(this.nSites).fill(false);
     this.openCount = 0;
   }
@@ -199,8 +199,8 @@ export class PercolationModel {
   randomize(p) {
     if (this.gridType === "hex") {
       this.open.fill(false);
-      this.ufTop = new UnionFind(this.nSites + 1);
-      this.ufBottom = new UnionFind(this.nSites + 1);
+      this.ufTop = new UnionFind(this.nSites + 2);
+      this.ufBottom = new UnionFind(this.nSites + 2);
       this.openCount = 0;
 
       for (const [row, col] of this.hexCoords) {
@@ -211,8 +211,8 @@ export class PercolationModel {
     } else {
       const n = this.size;
       this.open.fill(false);
-      this.ufTop = new UnionFind(this.nSites + 1);
-      this.ufBottom = new UnionFind(this.nSites + 1);
+      this.ufTop = new UnionFind(this.nSites + 2);
+      this.ufBottom = new UnionFind(this.nSites + 2);
       this.openCount = 0;
 
       for (let row = 0; row < n; row++) {

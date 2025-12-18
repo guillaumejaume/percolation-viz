@@ -75,13 +75,24 @@ btnStep.addEventListener("click", () => {
   if (closed.length === 0) return;
   const idx = closed[Math.floor(Math.random() * closed.length)];
   
-  // Convert index to coordinates
-  const coords = model.getAllCoordinates();
-  if (idx < coords.length) {
-    const [row, col] = coords[idx];
-    model.openSite(row, col);
-    redraw();
+  // Convert index to coordinates based on grid type
+  let row, col;
+  if (model.gridType === "hex") {
+    // For hex, use the stored coordinates
+    const coords = model.getAllCoordinates();
+    if (idx < coords.length) {
+      [row, col] = coords[idx];
+    } else {
+      return;
+    }
+  } else {
+    // For square/triangular, simple conversion
+    row = Math.floor(idx / model.size);
+    col = idx % model.size;
   }
+  
+  model.openSite(row, col);
+  redraw();
 });
 
 btnReset.addEventListener("click", () => {

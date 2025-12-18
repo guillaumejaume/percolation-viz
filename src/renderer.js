@@ -37,11 +37,18 @@ export class Renderer {
   drawSquareGrid(model) {
     const n = model.size;
     const w = this.size;
-    const cellSize = w / n;
+    const h = this.size;
+    const cellSize = Math.min(w, h) / n;
     const percolates = model.percolates();
     const clusterMask = percolates ? model.percolatingClusterMask() : null;
 
     this.clear();
+
+    // Center the grid
+    const totalWidth = n * cellSize;
+    const totalHeight = n * cellSize;
+    const offsetX = (w - totalWidth) / 2;
+    const offsetY = (h - totalHeight) / 2;
 
     for (let row = 0; row < n; row++) {
       for (let col = 0; col < n; col++) {
@@ -54,25 +61,28 @@ export class Renderer {
         } else {
           fill = "#06b6d4";
         }
-        const x = col * cellSize;
-        const y = row * cellSize;
+        const x = offsetX + col * cellSize;
+        const y = offsetY + row * cellSize;
         this.ctx.fillStyle = fill;
         this.ctx.fillRect(x, y, cellSize, cellSize);
       }
     }
 
-    // Grid lines
-    this.ctx.strokeStyle = "rgba(148,163,184,0.7)";
-    this.ctx.lineWidth = 0.7;
+    // Grid lines - white for visibility
+    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+    this.ctx.lineWidth = 1;
     for (let i = 0; i <= n; i++) {
-      const pos = i * cellSize + 0.5;
+      const pos = offsetX + i * cellSize;
       this.ctx.beginPath();
-      this.ctx.moveTo(pos, 0);
-      this.ctx.lineTo(pos, w);
+      this.ctx.moveTo(pos, offsetY);
+      this.ctx.lineTo(pos, offsetY + totalHeight);
       this.ctx.stroke();
+    }
+    for (let i = 0; i <= n; i++) {
+      const pos = offsetY + i * cellSize;
       this.ctx.beginPath();
-      this.ctx.moveTo(0, pos);
-      this.ctx.lineTo(w, pos);
+      this.ctx.moveTo(offsetX, pos);
+      this.ctx.lineTo(offsetX + totalWidth, pos);
       this.ctx.stroke();
     }
   }
@@ -80,14 +90,32 @@ export class Renderer {
   drawTriangularGrid(model) {
     const n = model.size;
     const w = this.size;
-    const cellSize = w / n;
+    const h = this.size;
     const percolates = model.percolates();
     const clusterMask = percolates ? model.percolatingClusterMask() : null;
 
     this.clear();
 
-    // Draw triangular lattice sites as circles
-    const radius = cellSize * 0.35;
+    // For proper triangular tessellation:
+    // - Each triangle row has height = triangleHeight
+    // - Triangle side = 2 * triangleHeight / sqrt(3)
+    // - Triangles interlock: up triangles share base with down triangles
+    const triangleHeight = h / n;
+    const triangleSide = (2 * triangleHeight) / Math.sqrt(3);
+    const triangleWidth = triangleSide;
+
+    // Calculate total width for centering
+    // Even rows span: n * triangleWidth
+    // Odd rows span: n * triangleWidth + triangleWidth/2 (due to offset)
+    const hasOddRows = n > 1 && (n - 1) % 2 === 1;
+    const totalWidth = hasOddRows ? n * triangleWidth + triangleWidth / 2 : n * triangleWidth;
+    const offsetX = (w - totalWidth) / 2;
+    const offsetY = 0; // Start from top
+
+    // Store triangle data for two-pass rendering
+    const triangles = [];
+
+    // First pass: collect all triangle data
     for (let row = 0; row < n; row++) {
       for (let col = 0; col < n; col++) {
         const idx = model.index(row, col);
@@ -100,39 +128,73 @@ export class Renderer {
           fill = "#06b6d4";
         }
         
-        const x = (col + 0.5) * cellSize;
-        const y = (row + 0.5) * cellSize;
+        // Even rows: triangles point up, odd rows: point down
+        const pointingUp = row % 2 === 0;
         
-        this.ctx.fillStyle = fill;
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, radius, 0, Math.PI * 2);
-        this.ctx.fill();
+        // Y position: center of each triangle row
+        const y = offsetY + (row + 0.5) * triangleHeight;
+        
+        // X position: for tessellation, odd rows offset by half width to interlock
+        const xOffset = pointingUp ? 0 : triangleWidth / 2;
+        const x = offsetX + col * triangleWidth + triangleWidth / 2 + xOffset;
+        
+        triangles.push({ x, y, side: triangleSide, pointingUp, fill });
       }
     }
 
-    // Draw connections for open sites
-    this.ctx.strokeStyle = "rgba(148,163,184,0.4)";
-    this.ctx.lineWidth = 1;
-    for (let row = 0; row < n; row++) {
-      for (let col = 0; col < n; col++) {
-        const idx = model.index(row, col);
-        if (!model.open[idx]) continue;
-        
-        const x1 = (col + 0.5) * cellSize;
-        const y1 = (row + 0.5) * cellSize;
-        
-        for (const [r2, c2] of model.neighbors(row, col)) {
-          if (model.isOpen(r2, c2)) {
-            const x2 = (c2 + 0.5) * cellSize;
-            const y2 = (r2 + 0.5) * cellSize;
-            this.ctx.beginPath();
-            this.ctx.moveTo(x1, y1);
-            this.ctx.lineTo(x2, y2);
-            this.ctx.stroke();
-          }
-        }
-      }
+    // Draw all triangles filled first
+    for (const tri of triangles) {
+      this._drawTriangleFill(tri.x, tri.y, tri.side, tri.pointingUp, tri.fill);
     }
+
+    // Then draw all contours
+    for (const tri of triangles) {
+      this._drawTriangleStroke(tri.x, tri.y, tri.side, tri.pointingUp);
+    }
+  }
+
+  _drawTriangleFill(x, y, side, pointingUp, fillColor) {
+    const height = side * Math.sqrt(3) / 2;
+    this.ctx.beginPath();
+    
+    if (pointingUp) {
+      // Pointing up: top vertex at y - height/2, base at y + height/2
+      this.ctx.moveTo(x, y - height / 2);
+      this.ctx.lineTo(x - side / 2, y + height / 2);
+      this.ctx.lineTo(x + side / 2, y + height / 2);
+    } else {
+      // Pointing down: base at y - height/2, bottom vertex at y + height/2
+      this.ctx.moveTo(x - side / 2, y - height / 2);
+      this.ctx.lineTo(x + side / 2, y - height / 2);
+      this.ctx.lineTo(x, y + height / 2);
+    }
+    
+    this.ctx.closePath();
+    this.ctx.fillStyle = fillColor;
+    this.ctx.fill();
+  }
+
+  _drawTriangleStroke(x, y, side, pointingUp) {
+    const height = side * Math.sqrt(3) / 2;
+    this.ctx.beginPath();
+    
+    if (pointingUp) {
+      // Pointing up: top vertex at y - height/2, base at y + height/2
+      this.ctx.moveTo(x, y - height / 2);
+      this.ctx.lineTo(x - side / 2, y + height / 2);
+      this.ctx.lineTo(x + side / 2, y + height / 2);
+    } else {
+      // Pointing down: base at y - height/2, bottom vertex at y + height/2
+      this.ctx.moveTo(x - side / 2, y - height / 2);
+      this.ctx.lineTo(x + side / 2, y - height / 2);
+      this.ctx.lineTo(x, y + height / 2);
+    }
+    
+    this.ctx.closePath();
+    // White border for visibility - draw on top of fills
+    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+    this.ctx.lineWidth = 1.5;
+    this.ctx.stroke();
   }
 
   drawHexGrid(model) {
@@ -142,13 +204,25 @@ export class Renderer {
     const percolates = model.percolates();
     const clusterMask = percolates ? model.percolatingClusterMask() : null;
 
-    // Calculate hex size to fit the grid
-    const hexRadius = Math.min(w, h) / (n * 1.8);
-    const hexWidth = hexRadius * Math.sqrt(3);
-
     this.clear();
 
-    // Draw hexagons
+    // Calculate hex size to fill the entire canvas perfectly
+    // For odd-r offset hexagonal grid with n rows:
+    // - Vertical spacing between row centers: hexRadius * 1.5
+    // - Total height: hexRadius (top) + (n-1) * hexRadius * 1.5 + hexRadius (bottom)
+    //   = hexRadius * (1 + 1.5*(n-1) + 1) = hexRadius * (2 + 1.5*(n-1))
+    // - We want this to equal h, so: hexRadius = h / (2 + 1.5*(n-1))
+    const numRows = n;
+    const hexRadius = h / (2 + 1.5 * (numRows - 1));
+    const hexWidth = hexRadius * Math.sqrt(3);
+
+    // Calculate total width for centering
+    // Even rows have n hexagons, so max width is n * hexWidth
+    const maxWidth = n * hexWidth;
+    const offsetX = (w - maxWidth) / 2;
+    const offsetY = hexRadius; // Top margin to center vertically
+
+    // Draw hexagons with proper tessellation
     for (const [row, col] of model.getAllCoordinates()) {
       const idx = model.index(row, col);
       let fill;
@@ -161,39 +235,19 @@ export class Renderer {
       }
 
       const isOddRow = row % 2 === 1;
-      const x = hexWidth * (col + 0.5) + (isOddRow ? hexWidth / 2 : 0);
-      const y = hexRadius * (row * 1.5 + 1);
+      // For odd-r offset: odd rows are shifted right by hexWidth/2
+      const x = offsetX + hexWidth * (col + 0.5) + (isOddRow ? hexWidth / 2 : 0);
+      const y = offsetY + row * hexRadius * 1.5;
 
-      // Center the grid
-      const offsetX = (w - hexWidth * (n - 0.5)) / 2;
-      const offsetY = (h - hexRadius * (n * 1.5 + 0.5)) / 2;
-
-      this._drawHexagon(x + offsetX, y + offsetY, hexRadius, fill);
-    }
-
-    // Draw hex borders
-    this.ctx.strokeStyle = "rgba(148,163,184,0.5)";
-    this.ctx.lineWidth = 0.8;
-    for (const [row, col] of model.getAllCoordinates()) {
-      const idx = model.index(row, col);
-      if (!model.open[idx]) continue;
-
-      const isOddRow = row % 2 === 1;
-      const hexWidth = hexRadius * Math.sqrt(3);
-      const x = hexWidth * (col + 0.5) + (isOddRow ? hexWidth / 2 : 0);
-      const y = hexRadius * (row * 1.5 + 1);
-
-      const offsetX = (w - hexWidth * (n - 0.5)) / 2;
-      const offsetY = (h - hexRadius * (n * 1.5 + 0.5)) / 2;
-
-      this._drawHexagon(x + offsetX, y + offsetY, hexRadius, null, true);
+      this._drawHexagon(x, y, hexRadius, fill);
     }
   }
 
   _drawHexagon(x, y, radius, fillColor, strokeOnly = false) {
     this.ctx.beginPath();
     for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI / 3) * i;
+      // Start from top vertex (angle -π/2) and go clockwise
+      const angle = (Math.PI / 3) * i - Math.PI / 2;
       const hx = x + radius * Math.cos(angle);
       const hy = y + radius * Math.sin(angle);
       if (i === 0) {
@@ -208,9 +262,11 @@ export class Renderer {
       this.ctx.fillStyle = fillColor;
       this.ctx.fill();
     }
-    if (strokeOnly) {
-      this.ctx.stroke();
-    }
+    
+    // White border for visibility (always draw, even if strokeOnly is false)
+    this.ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+    this.ctx.lineWidth = 1.2;
+    this.ctx.stroke();
   }
 }
 
