@@ -57,14 +57,24 @@ function redraw(animated = false) {
 }
 
 async function processAnimationQueue() {
-  const batch = animationQueue.splice(0, 10); // Traiter par lots de 10
+  // Ajuster la taille du lot et le délai selon la taille de la grille
+  // Plus la grille est grande, plus on traite de sites par lot et moins on attend
+  const gridSize = model.size;
+  const batchSize = Math.max(20, Math.floor(gridSize * 1.5)); // Beaucoup plus de sites par lot pour grandes grilles
+  const delay = Math.max(0, Math.floor(15 - (gridSize - 10) * 0.3)); // Délai beaucoup plus réduit pour grandes grilles
+  
+  const batch = animationQueue.splice(0, batchSize);
   for (const { row, col } of batch) {
     model.openSite(row, col);
-    renderer.draw(model);
-    updateStatus();
-    await new Promise(resolve => setTimeout(resolve, 20)); // 20ms entre chaque site
   }
+  // Dessiner une seule fois après le lot entier pour plus de performance
+  renderer.draw(model);
+  updateStatus();
+  
   if (animationQueue.length > 0) {
+    if (delay > 0) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
     requestAnimationFrame(() => processAnimationQueue());
   } else {
     renderer.draw(model);
