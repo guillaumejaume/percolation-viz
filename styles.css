@@ -20,7 +20,7 @@ body {
 }
 
 .app-header {
-  padding: 2rem 2rem 1rem;
+  padding: clamp(1rem, 2vw, 2rem) clamp(1.25rem, 3vw, 2rem) clamp(0.75rem, 1.5vw, 1rem);
   background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, rgba(2, 6, 23, 0.4) 100%);
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
   backdrop-filter: blur(20px);
@@ -29,7 +29,7 @@ body {
 
 .app-header h1 {
   margin: 0;
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 3vw, 2rem);
   font-weight: 600;
   letter-spacing: -0.02em;
   background: linear-gradient(135deg, #ffffff 0%, #e5e7eb 100%);
@@ -40,7 +40,7 @@ body {
 
 .subtitle {
   margin: 0.5rem 0 0;
-  font-size: 0.95rem;
+  font-size: clamp(0.8rem, 1.2vw, 0.95rem);
   color: rgba(156, 163, 175, 0.8);
   font-weight: 400;
   letter-spacing: -0.01em;
@@ -49,23 +49,23 @@ body {
 .app-main {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
-  gap: 2rem;
-  padding: 2rem 2.5rem 2.5rem;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: clamp(1rem, 2vw, 2rem);
+  padding: clamp(1rem, 2.5vw, 2.5rem);
 }
 
 .controls {
   background: rgba(15, 23, 42, 0.7);
-  border-radius: 1.25rem;
-  padding: 1.5rem;
+  border-radius: clamp(0.875rem, 1.5vw, 1.25rem);
+  padding: clamp(1rem, 1.5vw, 1.5rem);
   border: 1px solid rgba(148, 163, 184, 0.2);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  max-height: calc(100vh - 180px);
+  gap: clamp(0.875rem, 1.25vw, 1.25rem);
+  max-height: calc(100vh - clamp(120px, 15vh, 180px));
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
@@ -326,10 +326,10 @@ button:active:not(:disabled) {
 }
 
 .canvas-wrapper {
-  border-radius: 1.5rem;
+  border-radius: clamp(1rem, 2vw, 1.5rem);
   background: linear-gradient(135deg, rgba(17, 24, 39, 0.8) 0%, rgba(2, 6, 23, 0.9) 100%);
   border: 1px solid rgba(148, 163, 184, 0.2);
-  padding: 1.5rem;
+  padding: clamp(0.75rem, 1.5vw, 1.5rem);
   display: flex;
   align-items: stretch;
   justify-content: center;
@@ -406,32 +406,80 @@ button:active:not(:disabled) {
 
 #percolation-canvas {
   width: 100%;
-  max-width: 720px;
+  max-width: min(720px, calc(100vw - clamp(320px, 25vw, 400px) - clamp(3rem, 6vw, 5rem)));
   aspect-ratio: 1 / 1;
-  border-radius: 1rem;
+  border-radius: clamp(0.75rem, 1.5vw, 1rem);
   background: #020617;
   display: block;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 1200px) {
+  .app-main {
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+    gap: clamp(1rem, 1.5vw, 1.5rem);
+  }
+  
+  #percolation-canvas {
+    max-width: min(600px, calc(100vw - 280px - 3rem));
+  }
 }
 
 @media (max-width: 900px) {
   .app-main {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto;
+    gap: 1.5rem;
+  }
+  
+  .controls {
+    max-height: none;
+  }
+  
+  #percolation-canvas {
+    max-width: min(600px, calc(100vw - 3rem));
   }
 }
 
 @media (max-width: 640px) {
   .app-header {
-    padding-inline: 1.25rem;
+    padding: 1rem 1.25rem 0.75rem;
   }
 
   .app-main {
-    padding-inline: 1.25rem;
+    padding: 1rem 1.25rem;
+    gap: 1rem;
+  }
+  
+  .controls {
+    padding: 1rem;
+    gap: 1rem;
   }
 
   .buttons {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+  }
+  
+  #percolation-canvas {
+    max-width: calc(100vw - 2.5rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header h1 {
+    font-size: 1.25rem;
+  }
+  
+  .subtitle {
+    font-size: 0.8rem;
+  }
+  
+  .controls {
+    padding: 0.875rem;
+  }
+  
+  #percolation-canvas {
+    max-width: calc(100vw - 2rem);
   }
 }
 

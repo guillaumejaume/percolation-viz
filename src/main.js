@@ -13,7 +13,6 @@ const btnReset = document.getElementById("btn-reset");
 const btnSimulate = document.getElementById("btn-simulate");
 const statusPercolates = document.getElementById("status-percolates");
 const statusOpenCount = document.getElementById("status-open-count");
-const statusThreshold = document.getElementById("status-threshold");
 const celebration = document.getElementById("celebration");
 
 const renderer = new Renderer(canvas);
@@ -39,19 +38,6 @@ function updateStatus() {
     triggerCelebration();
   }
   wasPercolating = percolates;
-
-  const type = gridTypeSelect.value;
-  let text;
-  if (type === "square") {
-    text = "≈ 0,593 (grille carrée)";
-  } else if (type === "triangular") {
-    text = "0,5 (grille triangulaire)";
-  } else if (type === "hex") {
-    text = "≈ 0,697 (grille hexagonale)";
-  } else {
-    text = "—";
-  }
-  statusThreshold.textContent = text;
 }
 
 function triggerCelebration() {
@@ -279,6 +265,9 @@ function setupTooltips() {
         document.addEventListener('mousemove', mouseMoveHandler);
       } else {
         // Pour les autres tooltips, positionner au-dessus du trigger
+        // Afficher temporairement pour calculer la taille
+        tooltipDiv.style.visibility = 'hidden';
+        tooltipDiv.style.display = 'block';
         const rect = trigger.getBoundingClientRect();
         const tooltipRect = tooltipDiv.getBoundingClientRect();
         const left = rect.left + (rect.width / 2);
@@ -286,6 +275,7 @@ function setupTooltips() {
         tooltipDiv.style.left = `${left}px`;
         tooltipDiv.style.top = `${top}px`;
         tooltipDiv.style.transform = 'translateX(-50%)';
+        tooltipDiv.style.visibility = 'visible';
       }
     });
     
@@ -299,9 +289,17 @@ function setupTooltips() {
   });
 }
 
-// Initial
-updateLabels();
-resetModel();
-setupTooltips();
+// Initial - s'assurer que le DOM est prêt
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    updateLabels();
+    resetModel();
+    setupTooltips();
+  });
+} else {
+  updateLabels();
+  resetModel();
+  setupTooltips();
+}
 
 

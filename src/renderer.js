@@ -44,12 +44,13 @@ export class Renderer {
 
     this.clear();
 
-    // Center the grid
+    // Center the grid - use exact calculations to avoid rounding issues
     const totalWidth = n * cellSize;
     const totalHeight = n * cellSize;
     const offsetX = (w - totalWidth) / 2;
     const offsetY = (h - totalHeight) / 2;
 
+    // Draw cells - ensure they fill the entire grid area
     for (let row = 0; row < n; row++) {
       for (let col = 0; col < n; col++) {
         const idx = model.index(row, col);
@@ -63,26 +64,31 @@ export class Renderer {
         }
         const x = offsetX + col * cellSize;
         const y = offsetY + row * cellSize;
+        // Use ceil to ensure cells fill completely and touch edges
+        const cellWidth = (col === n - 1) ? (offsetX + totalWidth - x) : cellSize;
+        const cellHeight = (row === n - 1) ? (offsetY + totalHeight - y) : cellSize;
         this.ctx.fillStyle = fill;
-        this.ctx.fillRect(x, y, cellSize, cellSize);
+        this.ctx.fillRect(x, y, cellWidth, cellHeight);
       }
     }
 
     // Grid lines - white for visibility
     this.ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
     this.ctx.lineWidth = 1;
+    
+    // Draw all grid lines including borders - use integer coordinates for crisp lines
     for (let i = 0; i <= n; i++) {
-      const pos = offsetX + i * cellSize;
+      const pos = Math.round(offsetX + i * cellSize) + 0.5;
       this.ctx.beginPath();
-      this.ctx.moveTo(pos, offsetY);
-      this.ctx.lineTo(pos, offsetY + totalHeight);
+      this.ctx.moveTo(pos, Math.round(offsetY) + 0.5);
+      this.ctx.lineTo(pos, Math.round(offsetY + totalHeight) + 0.5);
       this.ctx.stroke();
     }
     for (let i = 0; i <= n; i++) {
-      const pos = offsetY + i * cellSize;
+      const pos = Math.round(offsetY + i * cellSize) + 0.5;
       this.ctx.beginPath();
-      this.ctx.moveTo(offsetX, pos);
-      this.ctx.lineTo(offsetX + totalWidth, pos);
+      this.ctx.moveTo(Math.round(offsetX) + 0.5, pos);
+      this.ctx.lineTo(Math.round(offsetX + totalWidth) + 0.5, pos);
       this.ctx.stroke();
     }
   }
