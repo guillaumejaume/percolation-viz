@@ -6,13 +6,29 @@ export class Renderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     this.dpr = window.devicePixelRatio || 1;
+    this.model = null; // Store model for redraw on resize
     this.resize();
-    window.addEventListener("resize", () => this.resize());
+    
+    // Debounce resize to avoid too many redraws
+    let resizeTimeout;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        this.resize();
+        if (this.model) {
+          this.draw(this.model);
+        }
+      }, 100);
+    });
   }
 
   resize() {
     const rect = this.canvas.getBoundingClientRect();
-    const size = Math.min(rect.width, rect.height || rect.width);
+    // Use the minimum of width and height to ensure square and no overflow
+    // Account for padding of the wrapper
+    const availableWidth = rect.width;
+    const availableHeight = rect.height;
+    const size = Math.min(availableWidth, availableHeight);
     this.canvas.width = size * this.dpr;
     this.canvas.height = size * this.dpr;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
@@ -25,6 +41,7 @@ export class Renderer {
   }
 
   draw(model) {
+    this.model = model; // Store model for resize redraw
     if (model.gridType === "square") {
       this.drawSquareGrid(model);
     } else if (model.gridType === "triangular") {
@@ -44,13 +61,13 @@ export class Renderer {
 
     this.clear();
 
-    // Center the grid - use exact calculations to avoid rounding issues
+    // Center the grid
     const totalWidth = n * cellSize;
     const totalHeight = n * cellSize;
     const offsetX = (w - totalWidth) / 2;
     const offsetY = (h - totalHeight) / 2;
 
-    // Draw cells - ensure they fill the entire grid area
+    // Draw cells - all cells use the same size for consistency
     for (let row = 0; row < n; row++) {
       for (let col = 0; col < n; col++) {
         const idx = model.index(row, col);
@@ -64,31 +81,31 @@ export class Renderer {
         }
         const x = offsetX + col * cellSize;
         const y = offsetY + row * cellSize;
-        // Use ceil to ensure cells fill completely and touch edges
-        const cellWidth = (col === n - 1) ? (offsetX + totalWidth - x) : cellSize;
-        const cellHeight = (row === n - 1) ? (offsetY + totalHeight - y) : cellSize;
         this.ctx.fillStyle = fill;
-        this.ctx.fillRect(x, y, cellWidth, cellHeight);
+        this.ctx.fillRect(x, y, cellSize, cellSize);
       }
     }
 
     // Grid lines - white for visibility
+    // Draw lines at cell boundaries, ensuring corners are covered
     this.ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
     this.ctx.lineWidth = 1;
     
-    // Draw all grid lines including borders - use integer coordinates for crisp lines
+    // Vertical lines (including left and right borders)
     for (let i = 0; i <= n; i++) {
-      const pos = Math.round(offsetX + i * cellSize) + 0.5;
+      const x = offsetX + i * cellSize;
       this.ctx.beginPath();
-      this.ctx.moveTo(pos, Math.round(offsetY) + 0.5);
-      this.ctx.lineTo(pos, Math.round(offsetY + totalHeight) + 0.5);
+      this.ctx.moveTo(x, offsetY);
+      this.ctx.lineTo(x, offsetY + totalHeight);
       this.ctx.stroke();
     }
+    
+    // Horizontal lines (including top and bottom borders)
     for (let i = 0; i <= n; i++) {
-      const pos = Math.round(offsetY + i * cellSize) + 0.5;
+      const y = offsetY + i * cellSize;
       this.ctx.beginPath();
-      this.ctx.moveTo(Math.round(offsetX) + 0.5, pos);
-      this.ctx.lineTo(Math.round(offsetX + totalWidth) + 0.5, pos);
+      this.ctx.moveTo(offsetX, y);
+      this.ctx.lineTo(offsetX + totalWidth, y);
       this.ctx.stroke();
     }
   }
