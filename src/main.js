@@ -15,7 +15,7 @@ const statusOpenCount = document.getElementById("status-open-count");
 const statusThreshold = document.getElementById("status-threshold");
 
 const renderer = new Renderer(canvas);
-let model = new PercolationModel(parseInt(gridSizeSlider.value, 10));
+let model = new PercolationModel(parseInt(gridSizeSlider.value, 10), gridTypeSelect.value);
 
 function updateLabels() {
   gridSizeLabel.textContent = `${gridSizeSlider.value} × ${gridSizeSlider.value}`;
@@ -28,7 +28,6 @@ function updateStatus() {
   statusPercolates.style.color = percolates ? "#22c55e" : "#f97316";
   statusOpenCount.textContent = model.openCount.toString();
 
-  // Met à jour le seuil théorique en fonction du type de grille sélectionné.
   const type = gridTypeSelect.value;
   let text;
   if (type === "square") {
@@ -44,13 +43,14 @@ function updateStatus() {
 }
 
 function redraw() {
-  renderer.drawSquareGrid(model);
+  renderer.draw(model);
   updateStatus();
 }
 
 function resetModel() {
   const size = parseInt(gridSizeSlider.value, 10);
-  model.reset(size);
+  const gridType = gridTypeSelect.value;
+  model.reset(size, gridType);
   redraw();
 }
 
@@ -74,20 +74,21 @@ btnStep.addEventListener("click", () => {
   const closed = model.closedSites();
   if (closed.length === 0) return;
   const idx = closed[Math.floor(Math.random() * closed.length)];
-  const size = model.size;
-  const row = Math.floor(idx / size);
-  const col = idx % size;
-  model.openSite(row, col);
-  redraw();
+  
+  // Convert index to coordinates
+  const coords = model.getAllCoordinates();
+  if (idx < coords.length) {
+    const [row, col] = coords[idx];
+    model.openSite(row, col);
+    redraw();
+  }
 });
 
 btnReset.addEventListener("click", () => {
   resetModel();
 });
 
-// Currently only square grid is implemented; the dropdown is future-proofed.
 gridTypeSelect.addEventListener("change", () => {
-  // For now, re-use the same square model and redraw.
   resetModel();
 });
 
