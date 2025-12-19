@@ -36,7 +36,7 @@ export class Renderer {
   }
 
   clear() {
-    this.ctx.fillStyle = "#020617";
+    this.ctx.fillStyle = "#1e293b";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
