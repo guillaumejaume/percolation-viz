@@ -21,6 +21,8 @@ let wasPercolating = false;
 let isSimulating = false;
 let simulationInterval = null;
 let animationQueue = [];
+// Suivi de l'état de la simulation (valeur actuelle de p)
+let simulationCurrentP = null;
 
 function updateLabels() {
   gridSizeLabel.textContent = `${gridSizeSlider.value} × ${gridSizeSlider.value}`;
@@ -83,7 +85,7 @@ async function processAnimationQueue() {
 }
 
 function resetModel() {
-  stopSimulation();
+  stopSimulation(true);
   animationQueue = [];
   wasPercolating = false;
   const size = parseInt(gridSizeSlider.value, 10);
@@ -105,7 +107,7 @@ probSlider.addEventListener("input", () => {
 btnRandomize.addEventListener("click", () => {
   if (isSimulating) return;
   const p = parseFloat(probSlider.value);
-  stopSimulation();
+  stopSimulation(true);
   
   // Animation progressive
   model.reset(model.size, model.gridType);
@@ -132,7 +134,7 @@ btnRandomize.addEventListener("click", () => {
 
 btnStep.addEventListener("click", () => {
   if (isSimulating) return;
-  stopSimulation();
+  stopSimulation(true);
   const closed = model.closedSites();
   if (closed.length === 0) return;
   const idx = closed[Math.floor(Math.random() * closed.length)];
@@ -159,7 +161,7 @@ btnStep.addEventListener("click", () => {
 });
 
 btnReset.addEventListener("click", () => {
-  stopSimulation();
+  stopSimulation(true);
   resetModel();
 });
 
@@ -169,7 +171,8 @@ gridTypeSelect.addEventListener("change", () => {
 
 btnSimulate.addEventListener("click", () => {
   if (isSimulating) {
-    stopSimulation();
+    // Pause la simulation mais garde la valeur actuelle de p
+    stopSimulation(false);
   } else {
     startSimulation();
   }
@@ -180,35 +183,64 @@ function startSimulation() {
   isSimulating = true;
   btnSimulate.textContent = "Arrêter";
   btnSimulate.style.background = "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)";
-  
-  model.reset(model.size, model.gridType);
-  renderer.draw(model);
-  updateStatus();
-  
-  let currentP = 0;
+
+  // Si c'est le premier démarrage de la simulation, on repart de 0 avec une grille vide
+  if (simulationCurrentP === null) {
+    model.reset(model.size, model.gridType);
+    renderer.draw(model);
+    updateStatus();
+    simulationCurrentP = 0;
+  }
+
   const targetP = 1;
   const step = 0.01;
   const delay = 100; // ms entre chaque étape
   
   simulationInterval = setInterval(() => {
-    currentP += step;
-    if (currentP > targetP) {
-      stopSimulation();
-      return;
-    }
-    
-    probSlider.value = currentP.toFixed(2);
+    // Incrémenter p en évitant les erreurs d'arrondi flottant
+    simulationCurrentP = Math.min(
+      targetP,
+      parseFloat((simulationCurrentP + step).toFixed(2))
+    );
+
+    // Mettre à jour le slider et les labels
+    probSlider.value = simulationCurrentP.toFixed(2);
     updateLabels();
     
     // Ouvrir des sites progressivement
     const allCoords = model.getAllCoordinates();
     const closed = model.closedSites();
+
+    // Cas 1 : plus de sites à ouvrir, on stoppe
     if (closed.length === 0) {
-      stopSimulation();
+      // Plus de sites à ouvrir : fin de simulation
+      stopSimulation(true);
+      return;
+    }
+
+    // Cas 2 : on a atteint p = 1.00 -> ouvrir tous les sites restants pour terminer plein à 100%
+    if (simulationCurrentP >= targetP) {
+      for (const idx of closed) {
+        let row, col;
+        if (model.gridType === "hex") {
+          const coords = model.getAllCoordinates();
+          if (idx < coords.length) {
+            [row, col] = coords[idx];
+          } else {
+            continue;
+          }
+        } else {
+          row = Math.floor(idx / model.size);
+          col = idx % model.size;
+        }
+        model.openSite(row, col);
+      }
+      redraw();
+      stopSimulation(true);
       return;
     }
     
-    // Ouvrir quelques sites à chaque étape pour animation fluide
+    // Cas général : p < 1, ouvrir quelques sites à chaque étape pour animation fluide
     const sitesToOpenThisStep = Math.max(1, Math.floor(closed.length * step * 2));
     for (let i = 0; i < sitesToOpenThisStep && closed.length > 0; i++) {
       const randomIdx = Math.floor(Math.random() * closed.length);
@@ -234,12 +266,15 @@ function startSimulation() {
   }, delay);
 }
 
-function stopSimulation() {
+function stopSimulation(resetProgress = false) {
   if (simulationInterval) {
     clearInterval(simulationInterval);
     simulationInterval = null;
   }
   isSimulating = false;
+  if (resetProgress) {
+    simulationCurrentP = null;
+  }
   btnSimulate.textContent = "Simulation";
   btnSimulate.style.background = "linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #22c55e 100%)";
 }
